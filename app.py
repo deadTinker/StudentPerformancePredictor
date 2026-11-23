@@ -27,6 +27,42 @@ st.set_page_config(
     layout="wide"
 )
 
+# ============================================================
+# VISUAL THEME ONLY — existing ML logic and features unchanged
+# ============================================================
+st.markdown("""
+<style>
+:root { color-scheme: dark; }
+.stApp { background: radial-gradient(ellipse at 90% 0%, #1d2451 0%, #0b1020 38%, #080d19 100%); color: #e8edff; }
+[data-testid="stHeader"] { background: rgba(11,16,32,.7); backdrop-filter: blur(12px); }
+[data-testid="stSidebar"] { background: #111a2f; border-right: 1px solid #2b3551; }
+[data-testid="stSidebar"] h1 { color: #e7eaff; font-weight: 800; letter-spacing: -.04em; }
+[data-testid="stSidebar"] [role="radiogroup"] label { border-radius: 11px; padding: .45rem .65rem; margin-bottom: .15rem; transition: background .18s ease; }
+[data-testid="stSidebar"] [role="radiogroup"] label:hover { background: #25345a; }
+.block-container { max-width: 1320px; padding-top: 2.5rem; padding-bottom: 4rem; }
+h1, h2, h3 { letter-spacing: -.035em; }
+h1 { color: #f4f6ff; font-weight: 800 !important; }
+h2, h3 { color: #e8edff; }
+p, label { line-height: 1.6; }
+[data-testid="stMetric"] { background: linear-gradient(150deg, #1b2642, #141e34); border: 1px solid #344361; border-radius: 17px; padding: 18px 20px; box-shadow: 0 8px 22px #03071230; }
+[data-testid="stMetricLabel"] { color: #aebcdb; }
+[data-testid="stMetricValue"] { color: #f5f7ff; font-weight: 800; }
+[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 15px; }
+[data-testid="stDataFrame"], [data-testid="stTable"] { border-radius: 14px; overflow: hidden; border: 1px solid #344361; }
+[data-testid="stAlert"] { border-radius: 14px; border-width: 1px; }
+[data-testid="stForm"], [data-testid="stExpander"] { background: #151e33; border: 1px solid #344361; border-radius: 15px; }
+.stButton > button { background: linear-gradient(110deg,#6366f1,#8b5cf6); color: #fff; border: 0; border-radius: 12px; padding: .7rem 1.2rem; font-weight: 700; box-shadow: 0 5px 18px #6366f133; transition: transform .15s ease, filter .15s ease; }
+.stButton > button:hover { color: #fff; filter: brightness(1.14); transform: translateY(-1px); border: 0; }
+.stButton > button:focus { color: #fff; }
+[data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="base-input"] { border-radius: 10px !important; }
+hr { border-color: #303b55 !important; }
+[data-testid="stCaptionContainer"] { color: #a3b2d1; }
+[data-testid="stProgressBar"] > div { border-radius: 10px; }
+@media (max-width: 768px) { .block-container { padding: 1.2rem .85rem 3rem; } h1 { font-size: 1.8rem !important; } }
+</style>
+""", unsafe_allow_html=True)
+
+
 
 # ============================================================
 # LOAD MODEL
