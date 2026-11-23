@@ -27,42 +27,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ============================================================
-# VISUAL THEME ONLY — existing ML logic and features unchanged
-# ============================================================
-st.markdown("""
-<style>
-:root { color-scheme: dark; }
-.stApp { background: radial-gradient(ellipse at 90% 0%, #1d2451 0%, #0b1020 38%, #080d19 100%); color: #e8edff; }
-[data-testid="stHeader"] { background: rgba(11,16,32,.7); backdrop-filter: blur(12px); }
-[data-testid="stSidebar"] { background: #111a2f; border-right: 1px solid #2b3551; }
-[data-testid="stSidebar"] h1 { color: #e7eaff; font-weight: 800; letter-spacing: -.04em; }
-[data-testid="stSidebar"] [role="radiogroup"] label { border-radius: 11px; padding: .45rem .65rem; margin-bottom: .15rem; transition: background .18s ease; }
-[data-testid="stSidebar"] [role="radiogroup"] label:hover { background: #25345a; }
-.block-container { max-width: 1320px; padding-top: 2.5rem; padding-bottom: 4rem; }
-h1, h2, h3 { letter-spacing: -.035em; }
-h1 { color: #f4f6ff; font-weight: 800 !important; }
-h2, h3 { color: #e8edff; }
-p, label { line-height: 1.6; }
-[data-testid="stMetric"] { background: linear-gradient(150deg, #1b2642, #141e34); border: 1px solid #344361; border-radius: 17px; padding: 18px 20px; box-shadow: 0 8px 22px #03071230; }
-[data-testid="stMetricLabel"] { color: #aebcdb; }
-[data-testid="stMetricValue"] { color: #f5f7ff; font-weight: 800; }
-[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 15px; }
-[data-testid="stDataFrame"], [data-testid="stTable"] { border-radius: 14px; overflow: hidden; border: 1px solid #344361; }
-[data-testid="stAlert"] { border-radius: 14px; border-width: 1px; }
-[data-testid="stForm"], [data-testid="stExpander"] { background: #151e33; border: 1px solid #344361; border-radius: 15px; }
-.stButton > button { background: linear-gradient(110deg,#6366f1,#8b5cf6); color: #fff; border: 0; border-radius: 12px; padding: .7rem 1.2rem; font-weight: 700; box-shadow: 0 5px 18px #6366f133; transition: transform .15s ease, filter .15s ease; }
-.stButton > button:hover { color: #fff; filter: brightness(1.14); transform: translateY(-1px); border: 0; }
-.stButton > button:focus { color: #fff; }
-[data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="base-input"] { border-radius: 10px !important; }
-hr { border-color: #303b55 !important; }
-[data-testid="stCaptionContainer"] { color: #a3b2d1; }
-[data-testid="stProgressBar"] > div { border-radius: 10px; }
-@media (max-width: 768px) { .block-container { padding: 1.2rem .85rem 3rem; } h1 { font-size: 1.8rem !important; } }
-</style>
-""", unsafe_allow_html=True)
-
-
 
 # ============================================================
 # LOAD MODEL
@@ -219,634 +183,516 @@ except Exception:
 
 
 # ============================================================
-# SIDEBAR NAVIGATION
+# DYNAMIC UI ENHANCEMENTS — design only; ML training is unchanged
 # ============================================================
+import html
+import plotly.express as px
+import plotly.graph_objects as go
 
-st.sidebar.title("🎓 Student Performance")
+PALETTES = {
+    "Dark": {
+        "bg": "#080d1c", "side": "#10192e", "surface": "#141e36",
+        "surface2": "#1b2947", "text": "#f0f5ff", "muted": "#a1afcd",
+        "border": "#2c3d60", "grid": "#344260", "hover": "#233358",
+    },
+    "Light": {
+        "bg": "#f2f5fc", "side": "#ffffff", "surface": "#ffffff",
+        "surface2": "#edf2fc", "text": "#1a2640", "muted": "#526482",
+        "border": "#dae3f2", "grid": "#dbe3f0", "hover": "#e8edfc",
+    },
+}
+PURPLE = "#8b5cf6"
+CYAN = "#38bdf8"
+GREEN = "#34d399"
+PINK = "#fb7185"
 
-st.sidebar.write("Navigation")
 
-page = st.sidebar.radio(
-    "Go to",
-    [
-        "🏠 Dashboard",
-        "🔮 Predict Result",
-        "📊 Dataset Analysis",
-        "🤖 Model Performance",
-        "🔍 Student Insights",
-        "ℹ️ About Project"
-    ]
-)
+def apply_theme(theme):
+    c = PALETTES[theme]
+    css = r"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+    .stApp { background: __BG__; color: __TEXT__; font-family: 'DM Sans',sans-serif; }
+    [data-testid="stHeader"] { background: transparent; }
+    [data-testid="stSidebar"] { background: __SIDE__; border-right: 1px solid __BORDER__; }
+    /* Do not override the font on sidebar icons: Streamlit uses Material Symbols. */
+    .block-container { max-width: 1460px; padding-top: 1.9rem; padding-bottom: 4rem; min-width:0; }
+    h1,h2,h3 { font-family: 'Space Grotesk','DM Sans',sans-serif !important; letter-spacing:-.04em; color: __TEXT__; }
+    h1 { font-size: 2.05rem !important; font-weight: 700 !important; }
+    h3 { font-size: 1.18rem !important; }
+    [data-testid="stMetric"] { padding: 20px 22px; border-radius: 20px; background: __SURFACE__; border: 1px solid __BORDER__; box-shadow: 0 12px 32px #070b1712; transition: transform .2s, border-color .2s, box-shadow .2s; }
+    [data-testid="stMetric"]:hover { transform: translateY(-3px); border-color: #8b5cf6aa; box-shadow: 0 12px 35px #8b5cf62b; }
+    [data-testid="stMetricLabel"] { color: __MUTED__; font-weight: 600; }
+    [data-testid="stMetricValue"] { color: __TEXT__; font-family:'Space Grotesk',sans-serif; font-weight: 700; font-size:clamp(1.1rem,2.25vw,1.85rem) !important; overflow:visible!important; text-overflow:clip!important; white-space:normal!important; overflow-wrap:anywhere!important; line-height:1.2; }
+    [data-testid="stDataFrame"] { border: 1px solid __BORDER__; border-radius: 15px; overflow: hidden; }
+    [data-testid="stAlert"] { border-radius: 14px; }
+    [data-testid="stExpander"], [data-testid="stForm"] { background: __SURFACE__; border: 1px solid __BORDER__; border-radius: 18px; }
+    [data-testid="stSlider"] { padding-top: 5px; }
+    [data-testid="stSidebar"] [role="radiogroup"] label { padding:.58rem .75rem; border-radius:12px; margin-bottom:.22rem; transition:background .2s; color:__TEXT__!important; cursor:pointer; }
+    [data-testid="stSidebar"] [role="radiogroup"] label p,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+    [data-testid="stSidebar"] h4 { color:__TEXT__!important; opacity:1!important; }
+    [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) { background:__SELECTED_BG__; box-shadow:inset 3px 0 0 #7c3aed; }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p { color:__MUTED__!important; }
+    [data-testid="stSidebar"] [role="radiogroup"] input[type="radio"] { accent-color:#7c3aed; }
+    [data-testid="stSidebar"] [role="radiogroup"] label:focus-within { outline:2px solid #7c3aed99; outline-offset:2px; }
 
+    [data-testid="stSidebar"] [role="radiogroup"] label:hover { background: __HOVER__; }
+    div.stButton > button { border-radius: 12px; font-weight: 700; transition: transform .18s, box-shadow .18s; }
+    div.stButton > button[kind="primary"] { background:linear-gradient(110deg,#725bfc,#9b5cf6); border:0; color:#fff; box-shadow: 0 8px 26px #725bfc55; }
+    div.stButton > button:hover { transform:translateY(-2px); box-shadow:0 10px 23px #725bfc33; }
+    [data-baseweb="input"] { border-radius:10px; }
+    hr { border-color: __BORDER__ !important; }
+    [data-testid="stCaptionContainer"] { color: __MUTED__; }
+    .brand { display:flex; align-items:center; gap:12px; margin:8px 0 20px; }
+    .brand-icon { border-radius: 15px; padding:12px; font-size:1.7rem; background:linear-gradient(135deg,#5b4aeb,#9b5cf6);box-shadow:0 9px 22px #7159f840; }
+    .brand-title { font-size:1.15rem;font-weight:800;letter-spacing:-.035em;color:__TEXT__; }
+    .brand-note {font-size:.72rem;letter-spacing:.09em;color:__MUTED__; }
+    .hero { margin-bottom:26px; position:relative;overflow:hidden;border:1px solid #8578ff45;border-radius:25px; padding:35px 36px; background:radial-gradient(circle at 85% 20%,#3b82f685,transparent 35%),linear-gradient(115deg,#2a296b 0%,#523aa1 52%,#242f69 100%); box-shadow:0 17px 48px #070b1733; animation: rise .5s ease both; }
+    .hero::before { content:"";position:absolute;width:230px;height:230px;border:1px solid #c4b5fd4d; border-radius:50%;right:5%;top:-95px;animation:orbit 9s ease-in-out infinite alternate; }
+    .hero::after { content:"";position:absolute;width:130px;height:130px;background:#a78bfa33;filter:blur(15px);border-radius:50%;right:15%;bottom:-85px;animation:float 7s ease-in-out infinite; }
+    .hero > * {position:relative;z-index:1;}
+    .hero .tag { color:#c4b5fd; text-transform:uppercase;font-size:.72rem;letter-spacing:.20em;font-weight:800; }
+    .hero h2 { color:white!important;font-size:2.12rem;max-width:660px;line-height:1.18;letter-spacing:-.05em;margin:.7rem 0; }
+    .hero p {color:#dfe3ff;max-width:680px;font-size:.96rem;}
+    .hero .pill {display:inline-block; border:1px solid #ffffff4a; background:#ffffff18; padding:8px 13px; border-radius:24px; color:#f0e9ff;font-size:.76rem;font-weight:700;margin-top:8px;}
+    .glass-card {background:__SURFACE__;border:1px solid __BORDER__;border-radius:19px;padding:22px;box-shadow:0 8px 27px #080d1610;animation:rise .5s ease both;}
+    .glass-card .eyebrow {color:#9b83f8;font-size:.74rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+    .glass-card .big {font-size:2rem;font-family:'Space Grotesk',sans-serif;font-weight:700;color:__TEXT__;}
+    .glass-card .note {font-size:.82rem;color:__MUTED__;}
+    .smalltag {display:inline-flex;align-items:center;gap:7px;border-radius:30px;padding:7px 12px;background:#19b78d20;color:__TEXT__;border:1px solid #34d39945;font-size:.75rem;font-weight:700;}
+    .section-caption {color:__MUTED__;margin-top:-8px;margin-bottom:16px;}
+    .status-orb {width:8px;height:8px;background:#34d399;display:inline-block;border-radius:50%;box-shadow:0 0 0 4px #34d39927;animation:pulse 2s infinite;}
+    .result-card {padding:25px;border-radius:21px;border:1px solid __BORDER__;background:__SURFACE__;animation:rise .35s ease both;}
+    .result-label {font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:__MUTED__;font-weight:800;}
+    .result-value {font-family:'Space Grotesk',sans-serif;font-size:2.4rem;font-weight:700;line-height:1.4;}
+    .step {box-sizing:border-box;min-width:0;overflow-wrap:anywhere;border:1px solid __BORDER__;background:__SURFACE__;border-radius:16px;padding:17px 18px;min-height:115px;transition:transform .2s,border-color .2s;}
+    .step:hover {transform:translateY(-3px);border-color:#8b5cf6;}
+    /* Four responsive KPI cards; long model names wrap instead of truncating. */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; width:100%; margin:0 0 20px; }
+    .stat-card { box-sizing:border-box; min-width:0; min-height:140px; background:__SURFACE__;border:1px solid __BORDER__;
+       border-radius:20px; padding:22px 23px; box-shadow:0 12px 32px #070b1712; transition:transform .2s,border-color .2s,box-shadow .2s; }
+    .stat-card:hover { transform:translateY(-3px); border-color:#8b5cf699; box-shadow:0 12px 32px #8b5cf626; }
+    .stat-label { color:__MUTED__;font-size:.92rem; font-weight:600; line-height:1.4; margin-bottom:13px; }
+    .stat-value { color:__TEXT__;font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,3.1vw,2.65rem);
+       letter-spacing:-.04em;font-weight:700;line-height:1.13; overflow-wrap:break-word; }
+    .stat-value.long { font-size:clamp(1.1rem,1.8vw,1.55rem); letter-spacing:-.015em;line-height:1.28; overflow-wrap:anywhere; }
+    /* Avoid negative margins/visual collision on smaller laptop widths. */
+    @media(max-width:1190px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:600px) { .stats-grid { grid-template-columns:minmax(0,1fr); gap:12px; } .stat-card { min-height:115px; padding:18px; } }
+
+    .step .n {font-size:.76rem;font-weight:700;color:#a78bfa;}
+    .step .t {font-size:.97rem;font-weight:700;color:__TEXT__;margin-top:8px;overflow-wrap:anywhere;line-height:1.35;}
+    @keyframes pulse {50%{box-shadow:0 0 0 8px #34d39905;}}
+    @keyframes rise {from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes orbit {to{transform:translate(-14px,19px) scale(1.12)}}
+    @keyframes float {50%{transform:translateY(-27px)}}
+    @media(max-width:768px) {.block-container{padding:1rem 1rem 3rem}.hero{padding:24px 19px}.hero h2{font-size:1.6rem}.step{height:auto;min-height:90px}}
+    @media(prefers-reduced-motion:reduce) {*,*::before,*::after{animation:none!important;transition:none!important}}
+    __THEME_SPECIFIC_RULES__
+    </style>
+    """
+    # Streamlit widgets inherit the app's *actual* theme, so explicitly supply
+    # appropriate contrast in Light mode rather than only repainting the sidebar.
+    light_css = r"""
+    [data-testid="stSidebar"] { background:#fff !important; color:#1a2640 !important; }
+    [data-testid="stSidebar"] :is(h1,h2,h3,h4,h5,h6),
+    [data-testid="stSidebar"] [role="radiogroup"] label p,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { color:#20324e!important; opacity:1!important; }
+    [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p { color:#5b36d1!important; font-weight:700!important; }
+    [data-testid="stSidebar"] [role="radiogroup"] label:hover { background:#edeafb!important; }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p { color:#526482!important; }
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h4 { color:#526482!important; }
+    .stApp [data-testid="stWidgetLabel"] p,
+    .stApp [data-testid="stMarkdownContainer"] > p { color:#253650!important; }
+    .stApp input, .stApp textarea { color:#1a2640!important; caret-color:#6d4fe3!important; }
+    .stApp [data-baseweb="input"], .stApp [data-baseweb="select"] > div { background:#ffffff!important; color:#1a2640!important; border-color:#ccd7e7!important; }
+    .stApp [data-baseweb="select"] span { color:#1a2640!important; }
+    .stApp [data-testid="stDataFrame"],.stApp [data-testid="stTable"] { background:#ffffff; }
+    .stApp [data-testid="stExpander"] { background:#ffffff!important; }
+    .stApp [data-testid="stExpander"] summary,
+    .stApp [data-testid="stExpander"] summary p { color:#20324e!important; }
+    .stApp div.stButton > button:not([kind="primary"]),
+    .stApp div.stDownloadButton > button:not([kind="primary"]) { background:#ffffff!important; color:#243550!important; border-color:#cad7ec!important; }
+    .stApp [data-testid="stAlert"] p { color:#23314b!important; }
+    .stApp [data-testid="stMetricLabel"] p { color:#526482!important; }
+    .stApp [data-testid="stMetricValue"] { color:#1a2640!important; }
+    /* Leave all hero and custom result-card colors untouched. */
+    """
+    dark_css = r"""
+    [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p { color:#ddd6fe!important; font-weight:700!important; }
+    """
+    c = {**c, "selected_bg": "#ebe7ff" if theme == "Light" else "#2b2455"}
+    css=css.replace("__THEME_SPECIFIC_RULES__", light_css if theme == "Light" else dark_css)
+    for key,value in c.items():
+        css=css.replace("__" + key.upper() + "__",value)
+    st.markdown(css, unsafe_allow_html=True)
+
+
+def plot_style(fig, theme="Dark", height=350):
+    c=PALETTES[theme]
+    fig.update_layout(
+        template="plotly_dark" if theme == "Dark" else "plotly_white",
+        height=height, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans, sans-serif",color=c["text"]),
+        margin=dict(l=10,r=12,t=45,b=18),
+        legend_title_text="", hovermode="closest",
+        xaxis=dict(gridcolor=c["grid"],zerolinecolor=c["grid"]),
+        yaxis=dict(gridcolor=c["grid"],zerolinecolor=c["grid"]),
+    )
+    return fig
+
+
+def plot_feature_importance(theme, height=330):
+    importance=feature_importance.sort_values("Importance",ascending=True)
+    fig=px.bar(importance,x="Importance",y="Feature",orientation="h",
+               color="Importance",color_continuous_scale=["#5555bf","#8b5cf6","#38bdf8"],
+               title="How strongly the original model weights each feature")
+    fig.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(plot_style(fig,theme,height),use_container_width=True)
+    st.caption("Absolute Logistic Regression coefficients (as originally calculated); not a causal explanation.")
+
+
+def donut_chart(frame,theme,title="Dataset outcomes"):
+    counts=frame["result"].astype(str).str.strip().value_counts().reset_index()
+    counts.columns=["Outcome","Students"]
+    fig=px.pie(counts,names="Outcome",values="Students",hole=.67,title=title,
+               color="Outcome",color_discrete_map={"Pass":"#34d399","Fail":"#fb7185"})
+    fig.update_traces(textposition="outside",textinfo="label+percent",marker=dict(line=dict(color=PALETTES[theme]["surface"],width=3)))
+    st.plotly_chart(plot_style(fig,theme,365),use_container_width=True)
+
+
+def feature_radar(values, theme, heading="Academic profile"):
+    names=["Attendance","Internal marks","Study hours","Previous score","Assignments"]
+    # Study time is shown on a 0-24 hour scale, unlike the percentage-based fields.
+    numbers=[values["attendance"],values["internal_marks"],values["study_hours"]*100/24,
+             values["previous_performance"],values["assignment_score"]]
+    fig=go.Figure(go.Scatterpolar(r=numbers+[numbers[0]],theta=names+[names[0]],
+                                  fill="toself",name="Student profile",line=dict(color="#a78bfa",width=3),
+                                  fillcolor="rgba(139,92,246,.25)"))
+    fig.update_layout(title=heading,polar=dict(radialaxis=dict(visible=True,range=[0,100],tickvals=[25,50,75,100],
+                        gridcolor=PALETTES[theme]["grid"]),angularaxis=dict(gridcolor=PALETTES[theme]["grid"])),
+                      showlegend=False)
+    st.plotly_chart(plot_style(fig,theme,360),use_container_width=True)
+    st.caption("Study hours are scaled relative to 24 hours for display; other factors use 0–100.")
+
+
+def page_heading(kicker, title, description):
+    st.markdown(f'<div style="color:#a78bfa; font-size:.78rem;letter-spacing:.17em;font-weight:800">{html.escape(kicker.upper())}</div>',unsafe_allow_html=True)
+    st.title(title)
+    st.markdown(f'<p class="section-caption">{html.escape(description)}</p>',unsafe_allow_html=True)
+
+
+def header_hero(kicker,title,desc,pills):
+    chips=" ".join(f'<span class="pill">{html.escape(x)}</span>' for x in pills)
+    st.markdown(f'<div class="hero"><div class="tag">{html.escape(kicker)}</div><h2>{html.escape(title)}</h2><p>{html.escape(desc)}</p>{chips}</div>',unsafe_allow_html=True)
+
+
+def feature_values_from_inputs(attendance, internal_marks, study_hours, previous_performance, assignment_score):
+    return {"attendance":attendance,"internal_marks":internal_marks,"study_hours":study_hours,
+            "previous_performance":previous_performance,"assignment_score":assignment_score}
+
+
+# ============================================================
+# SIDEBAR AND NAVIGATION
+# ============================================================
+st.sidebar.markdown('''<div class="brand"><span class="brand-icon">🎓</span><div><div class="brand-title">EduPredict <span style="color:#a78bfa">AI</span></div><div class="brand-note">INTELLIGENCE STUDIO</div></div></div>''',unsafe_allow_html=True)
+
+theme=st.sidebar.radio("Appearance",["Dark","Light"],horizontal=True, key="color_mode")
+apply_theme(theme)
+st.sidebar.markdown("#### WORKSPACE")
+page=st.sidebar.radio("Go to",[
+    "🏠 Dashboard", "🔮 Predict Result", "📊 Dataset Analysis",
+    "🤖 Model Performance", "🔍 Student Insights", "ℹ️ About Project"
+],label_visibility="collapsed")
+st.sidebar.divider()
+st.sidebar.markdown('<span class="smalltag"><span class="status-orb"></span> Prediction system online</span>',unsafe_allow_html=True)
+st.sidebar.caption(f"{len(df):,} student records · {len(available_models)} algorithms")
+st.sidebar.caption("For research & education")
 
 # ============================================================
 # PAGE 1 — DASHBOARD
 # ============================================================
-
 if page == "🏠 Dashboard":
-
-    st.title("🎓 Student Performance Prediction System")
-
-    st.write(
-        "Machine Learning based system for predicting student "
-        "academic performance using academic and study-related factors."
+    header_hero("WELCOME TO EDUPREDICT","Turn student data into meaningful insight.",
+                "Interactive academic analytics, performance predictions, and clear insights—all powered by the original ML pipeline.",
+                ["✦ 6 classification models","⚡ Interactive dashboards","● Live dataset"])
+    # Preserve the four original dashboard metrics. Display them in a CSS grid
+    # so long algorithm names never get clipped by Streamlit's metric ellipsis.
+    dashboard_stats = [
+        ("Total Students", f"{len(df):,}", False),
+        ("Features", str(len(feature_names)), False),
+        ("Missing Values", str(int(df.isnull().sum().sum())), False),
+        ("Model", "Logistic Regression", True),
+    ]
+    cards = "".join(
+        '<div class="stat-card"><div class="stat-label">' + html.escape(label) +
+        '</div><div class="stat-value' + (' long' if is_long else '') + '">' +
+        html.escape(value) + '</div></div>'
+        for label, value, is_long in dashboard_stats
     )
+    st.markdown('<div class="stats-grid">' + cards + '</div>', unsafe_allow_html=True)
 
-    st.divider()
-
-    # Metrics
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            "Total Students",
-            len(df)
-        )
-
-    with col2:
-        st.metric(
-            "Features",
-            len(feature_names)
-        )
-
-    with col3:
-        st.metric(
-            "Missing Values",
-            int(df.isnull().sum().sum())
-        )
-
-    with col4:
-        st.metric(
-            "Model",
-            "Logistic Regression"
-        )
-
-    st.divider()
-
-    st.subheader("📌 Project Overview")
-
-    st.write(
-        """
-        This application uses machine learning to predict whether
-        a student is likely to Pass or Fail based on attendance,
-        internal marks, study hours, previous performance and
-        assignment score.
-        """
-    )
+    st.write("")
+    left,right=st.columns([1.15,1],gap="large")
+    with left:
+        st.subheader("📌 Project Overview")
+        st.write("This application uses machine learning to predict whether a student is likely to Pass or Fail based on attendance, internal marks, study hours, previous performance and assignment score.")
+        st.subheader("📈 Explore the dataset")
+        x_feature=st.selectbox("Explore indicator",feature_names,format_func=lambda s:s.replace("_"," ").title(),key="overview_feature")
+        data_for_chart=df[[x_feature,"result"]].dropna().copy()
+        fig=px.histogram(data_for_chart,x=x_feature,color="result",barmode="overlay",nbins=28,
+                         opacity=.8,color_discrete_map={"Pass":"#34d399","Fail":"#fb7185"},
+                         title="Distribution by outcome",labels={x_feature:x_feature.replace("_"," ").title(),"result":"Outcome"})
+        st.plotly_chart(plot_style(fig,theme,390),use_container_width=True)
+    with right:
+        donut_chart(df,theme)
+        with st.container(border=True):
+            st.markdown("**💡 Did you know?**")
+            st.write("Hover over any chart to inspect values. Change the selected indicator to explore how it differs between Pass and Fail groups.")
 
     st.subheader("🔄 How the System Works")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.info("1️⃣ Student Input")
-
-    with col2:
-        st.info("2️⃣ Data Preprocessing")
-
-    with col3:
-        st.info("3️⃣ ML Prediction")
-
-    with col4:
-        st.info("4️⃣ Recommendations")
-
+    steps=[("01","👤 Student Input"),("02","⚙️ Data Preprocessing"),
+           ("03","🧠 ML Prediction"),("04","💡 Recommendations")]
+    cols=st.columns(4)
+    for col,(num,label) in zip(cols,steps):
+        with col:
+            st.markdown(f'<div class="step"><div class="n">STEP {num}</div><div class="t">{label}</div></div>',unsafe_allow_html=True)
+    st.caption("Charts summarize the loaded dataset; the dashboard is not an external live data feed.")
 
 # ============================================================
 # PAGE 2 — PREDICT RESULT
 # ============================================================
-
 elif page == "🔮 Predict Result":
-
-    st.title("🔮 Predict Student Result")
-
-    st.write(
-        "Enter the student's academic and study-related information."
-    )
-
-    selected_model_name = st.selectbox(
-        "Choose Algorithm",
-        list(available_models.keys())
-    )
-    selected_model = available_models[selected_model_name]
-
-    col1, col2 = st.columns(2)
-
+    page_heading("Prediction studio","🔮 Predict Student Result",
+                 "Choose an algorithm, enter academic indicators, and visualize the result.")
+    st.markdown("### 🧠 Prediction Engine")
+    selected_model_name=st.selectbox("Choose Algorithm",list(available_models.keys()))
+    selected_model=available_models[selected_model_name]
+    st.caption("The original saved model and five additional trained classifiers are available.")
+    st.markdown("### 🧑‍🎓 Academic Details")
+    col1,col2=st.columns(2,gap="large")
     with col1:
-
-        attendance = st.number_input(
-            "Attendance (%)",
-            min_value=0.0,
-            max_value=100.0,
-            value=75.0
-        )
-
-        internal_marks = st.number_input(
-            "Internal Marks",
-            min_value=0.0,
-            max_value=100.0,
-            value=60.0
-        )
-
-        study_hours = st.number_input(
-            "Study Hours per Day",
-            min_value=0.0,
-            max_value=24.0,
-            value=3.0
-        )
-
+        attendance=st.number_input("Attendance (%)",min_value=0.0,max_value=100.0,value=75.0)
+        internal_marks=st.number_input("Internal Marks",min_value=0.0,max_value=100.0,value=60.0)
+        study_hours=st.number_input("Study Hours per Day",min_value=0.0,max_value=24.0,value=3.0)
     with col2:
-
-        previous_performance = st.number_input(
-            "Previous Performance",
-            min_value=0.0,
-            max_value=100.0,
-            value=65.0
-        )
-
-        assignment_score = st.number_input(
-            "Assignment Score",
-            min_value=0.0,
-            max_value=100.0,
-            value=70.0
-        )
-
+        previous_performance=st.number_input("Previous Performance",min_value=0.0,max_value=100.0,value=65.0)
+        assignment_score=st.number_input("Assignment Score",min_value=0.0,max_value=100.0,value=70.0)
+        st.markdown('<div class="glass-card"><div class="eyebrow">CURRENT MODEL</div><div style="font-size:1.05rem;font-weight:800;margin-top:10px">'+html.escape(selected_model_name)+'</div><div class="note">Your existing ML models remain unchanged.</div></div>',unsafe_allow_html=True)
+    # Interactive, descriptive profile visualization. This does NOT change model inputs.
+    with st.expander("📊 Live input visualizer",expanded=False):
+        profile=feature_values_from_inputs(attendance,internal_marks,study_hours,previous_performance,assignment_score)
+        feature_radar(profile,theme,"Current input profile")
     st.divider()
-
-    if st.button(
-        "🔮 Predict Result",
-        use_container_width=True
-    ):
-
-        student = pd.DataFrame({
-            "attendance": [attendance],
-            "internal_marks": [internal_marks],
-            "study_hours": [study_hours],
-            "previous_performance": [previous_performance],
-            "assignment_score": [assignment_score]
+    if st.button("✦ Predict Result",use_container_width=True,type="primary"):
+        student=pd.DataFrame({
+            "attendance":[attendance],"internal_marks":[internal_marks],"study_hours":[study_hours],
+            "previous_performance":[previous_performance],"assignment_score":[assignment_score]
         })
-
-        prediction = selected_model.predict(student)[0]
-
-        probabilities = selected_model.predict_proba(student)[0]
-
-        st.subheader("Prediction")
-
-        if prediction == "Pass":
-
+        prediction=selected_model.predict(student)[0]
+        probabilities=selected_model.predict_proba(student)[0]
+        st.subheader("✨ Prediction")
+        label_color=GREEN if prediction=="Pass" else PINK
+        st.markdown(f'<div class="result-card"><div class="result-label">Model prediction</div><div class="result-value" style="color:{label_color}">{html.escape(str(prediction).upper())}</div><span class="smalltag">{html.escape(selected_model_name)}</span></div>',unsafe_allow_html=True)
+        if prediction=="Pass":
             st.success("✅ PASS")
-
         else:
-
             st.error("❌ FAIL")
 
-        # Probability
-
-        st.subheader("Prediction Probability")
-
-        probability_df = pd.DataFrame({
-            "Result": selected_model.classes_,
-            "Probability": probabilities
-        })
-
-        probability_df["Probability"] = (
-            probability_df["Probability"] * 100
-        ).round(2)
-
-        st.dataframe(
-            probability_df,
-            use_container_width=True
-        )
-
-        # Feature importance
-
+        st.subheader("🎯 Prediction Probability")
+        probability_df=pd.DataFrame({"Result":selected_model.classes_,"Probability":probabilities})
+        probability_df["Probability"]=(probability_df["Probability"]*100).round(2)
+        a,b=st.columns([1,1.4],gap="large")
+        with a:
+            st.dataframe(probability_df,use_container_width=True,hide_index=True)
+            predicted_idx=list(selected_model.classes_).index(prediction)
+            st.metric("Estimated confidence",f"{probabilities[predicted_idx]:.1%}")
+            st.caption("Confidence is the model's estimated probability, not a guarantee.")
+        with b:
+            fig=go.Figure(go.Indicator(mode="gauge+number",value=float(probabilities[predicted_idx]*100),
+                number={"suffix":"%","font":{"size":36}},title={"text":"Selected outcome probability"},
+                gauge={"axis":{"range":[0,100]},"bar":{"color":label_color,"thickness":.28},
+                       "bgcolor":PALETTES[theme]["surface"],"borderwidth":0,
+                       "steps":[{"range":[0,50],"color":"rgba(99, 102, 241, 0.09)"},{"range":[50,100],"color":"rgba(99, 102, 241, 0.15)"}]}))
+            st.plotly_chart(plot_style(fig,theme,285),use_container_width=True)
         st.subheader("📊 Most Important Factors")
-
-        st.bar_chart(
-            feature_importance.set_index("Feature")["Importance"]
-        )
-
-        # Recommendations
+        plot_feature_importance(theme)
 
         st.subheader("💡 General Recommendations")
-
-        recommendations = []
-
-        if attendance < 75:
-
-            recommendations.append(
-                "⚠ Attendance is below the recommended level. "
-                "Suggestion: Improve attendance to reduce academic risk."
-            )
-
-        if study_hours < 2:
-
-            recommendations.append(
-                "💡 Study time is relatively low. "
-                "Suggestion: Consider increasing your regular study schedule."
-            )
-
-        if internal_marks < 50:
-
-            recommendations.append(
-                "⚠ Internal marks are currently low. "
-                "Suggestion: Focus on upcoming internal assessments."
-            )
-
-        if previous_performance < 50:
-
-            recommendations.append(
-                "📚 Previous performance indicates areas for improvement. "
-                "Suggestion: Review difficult topics and strengthen weak areas."
-            )
-
-        if assignment_score < 50:
-
-            recommendations.append(
-                "📝 Assignment score is relatively low. "
-                "Suggestion: Give more attention to upcoming assignments."
-            )
-
-        if len(recommendations) == 0:
-
-            st.success(
-                "No specific improvement recommendation was triggered "
-                "for the entered values."
-            )
-
+        recommendations=[]
+        if attendance<75:
+            recommendations.append("⚠ Attendance is below the recommended level. Suggestion: Improve attendance to reduce academic risk.")
+        if study_hours<2:
+            recommendations.append("💡 Study time is relatively low. Suggestion: Consider increasing your regular study schedule.")
+        if internal_marks<50:
+            recommendations.append("⚠ Internal marks are currently low. Suggestion: Focus on upcoming internal assessments.")
+        if previous_performance<50:
+            recommendations.append("📚 Previous performance indicates areas for improvement. Suggestion: Review difficult topics and strengthen weak areas.")
+        if assignment_score<50:
+            recommendations.append("📝 Assignment score is relatively low. Suggestion: Give more attention to upcoming assignments.")
+        if len(recommendations)==0:
+            st.success("No specific improvement recommendation was triggered for the entered values.")
         else:
-
             for recommendation in recommendations:
-
                 st.warning(recommendation)
-
-        st.caption(
-            "These are general recommendations based on the entered "
-            "values. They are not guaranteed academic outcomes."
-        )
-
+        st.caption("These are general recommendations based on the entered values. They are not guaranteed academic outcomes.")
 
 # ============================================================
 # PAGE 3 — DATASET ANALYSIS
 # ============================================================
-
 elif page == "📊 Dataset Analysis":
-
-    st.title("📊 Dataset Analysis")
-
-    st.write(
-        "Explore the dataset used for training and evaluating "
-        "the machine learning model."
-    )
+    page_heading("Data workspace","📊 Dataset Analysis",
+                 "Explore student records, descriptive statistics, and feature distributions.")
+    st.subheader("Dataset Shape")
+    a,b,c=st.columns(3)
+    a.metric("Rows",df.shape[0])
+    b.metric("Columns",df.shape[1])
+    c.metric("Missing cells",int(df.isna().sum().sum()))
 
     st.subheader("Dataset Preview")
+    st.dataframe(df.head(20),use_container_width=True)
+    with st.expander("🔎 Interactive data explorer",expanded=False):
+        search=st.text_input("Search dataset",placeholder="Type a value to find matching records")
+        matching=df if not search else df[df.astype(str).apply(lambda col:col.str.contains(search,case=False,regex=False)).any(axis=1)]
+        st.caption(f"Showing {len(matching):,} matching rows")
+        st.dataframe(matching.head(200),use_container_width=True)
 
-    st.dataframe(
-        df.head(20),
-        use_container_width=True
-    )
+    with st.expander("🧪 Data Quality & Summary",expanded=True):
+        st.subheader("Missing Values")
+        missing_values=df.isnull().sum()
+        missing_df=pd.DataFrame({"Column":missing_values.index,"Missing Values":missing_values.values})
+        st.dataframe(missing_df,use_container_width=True)
+        st.subheader("Statistical Summary")
+        st.dataframe(df.describe(),use_container_width=True)
 
-    st.subheader("Dataset Shape")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric(
-            "Rows",
-            df.shape[0]
-        )
-
-    with col2:
-        st.metric(
-            "Columns",
-            df.shape[1]
-        )
-
-    st.subheader("Missing Values")
-
-    missing_values = df.isnull().sum()
-
-    missing_df = pd.DataFrame({
-        "Column": missing_values.index,
-        "Missing Values": missing_values.values
-    })
-
-    st.dataframe(
-        missing_df,
-        use_container_width=True
-    )
-
-    st.subheader("Statistical Summary")
-
-    st.dataframe(
-        df.describe(),
-        use_container_width=True
-    )
-
-    st.subheader("Feature Distributions")
-
-    numeric_columns = df.select_dtypes(
-        include=np.number
-    ).columns.tolist()
-
-    selected_column = st.selectbox(
-        "Select a feature",
-        numeric_columns
-    )
-
-    st.bar_chart(
-        df[selected_column].value_counts().sort_index()
-    )
-
+    st.subheader("📈 Feature Distributions")
+    numeric_columns=df.select_dtypes(include=np.number).columns.tolist()
+    selected_column=st.selectbox("Select a feature",numeric_columns)
+    chart_type=st.radio("Chart style",["Histogram","Box plot","Original frequency bars"],horizontal=True)
+    if chart_type=="Histogram":
+        fig=px.histogram(df,x=selected_column,nbins=35,title=f"Distribution — {selected_column}",
+                         color_discrete_sequence=["#8b5cf6"])
+        st.plotly_chart(plot_style(fig,theme),use_container_width=True)
+    elif chart_type=="Box plot":
+        fig=px.box(df,y=selected_column,points="outliers",title=f"Spread — {selected_column}",
+                   color_discrete_sequence=["#38bdf8"])
+        st.plotly_chart(plot_style(fig,theme),use_container_width=True)
+    else:
+        st.bar_chart(df[selected_column].value_counts().sort_index())
 
 # ============================================================
 # PAGE 4 — MODEL PERFORMANCE
 # ============================================================
-
 elif page == "🤖 Model Performance":
-
-    st.title("🤖 Model Performance")
-
-    st.write(
-        "Evaluation results of the classification algorithms trained "
-        "using the same training and testing split."
-    )
-
+    page_heading("Model observatory","🤖 Model Performance",
+                 "Compare every existing algorithm on the same held-out evaluation split.")
     st.subheader("Algorithms Compared")
-
-    # Evaluate the original saved Logistic Regression model on the same
-    # held-out test set as the additional algorithms.
-    original_predictions = model.predict(X_test)
-
-    original_metrics = pd.DataFrame([{
-        "Algorithm": "Logistic Regression (Original)",
-        "Accuracy": accuracy_score(y_test, original_predictions),
-        "Precision": precision_score(
-            y_test, original_predictions, pos_label="Pass", zero_division=0
-        ),
-        "Recall": recall_score(
-            y_test, original_predictions, pos_label="Pass", zero_division=0
-        ),
-        "F1 Score": f1_score(
-            y_test, original_predictions, pos_label="Pass", zero_division=0
-        )
+    # Original code for comparison kept identical, including model evaluation.
+    original_predictions=model.predict(X_test)
+    original_metrics=pd.DataFrame([{
+        "Algorithm":"Logistic Regression (Original)",
+        "Accuracy":accuracy_score(y_test,original_predictions),
+        "Precision":precision_score(y_test,original_predictions,pos_label="Pass",zero_division=0),
+        "Recall":recall_score(y_test,original_predictions,pos_label="Pass",zero_division=0),
+        "F1 Score":f1_score(y_test,original_predictions,pos_label="Pass",zero_division=0)
     }])
+    comparison_df=pd.concat([original_metrics,additional_model_metrics],ignore_index=True).sort_values(by="F1 Score",ascending=False)
 
-    comparison_df = pd.concat(
-        [original_metrics, additional_model_metrics],
-        ignore_index=True
-    ).sort_values(by="F1 Score", ascending=False)
+    best=comparison_df.iloc[0]
+    a,b,c=st.columns(3)
+    a.metric("Top F1 model",str(best["Algorithm"]))
+    b.metric("Top F1 score",f"{best['F1 Score']:.1%}")
+    c.metric("Models evaluated",len(comparison_df))
 
-    st.dataframe(
-        comparison_df.style.format({
-            "Accuracy": "{:.2%}",
-            "Precision": "{:.2%}",
-            "Recall": "{:.2%}",
-            "F1 Score": "{:.2%}"
-        }),
-        use_container_width=True
-    )
+    st.dataframe(comparison_df.style.format({"Accuracy":"{:.2%}","Precision":"{:.2%}","Recall":"{:.2%}","F1 Score":"{:.2%}"}),use_container_width=True)
+    metric=st.selectbox("Explore evaluation metric",["Accuracy","Precision","Recall","F1 Score"],index=3)
+    metric_view=comparison_df.sort_values(metric)
+    fig=px.bar(metric_view,x=metric,y="Algorithm",orientation="h",color=metric,
+               color_continuous_scale=["#5b49e1","#a78bfa","#38bdf8"],
+               title=f"Interactive {metric} comparison",text=metric)
+    fig.update_traces(texttemplate="%{text:.1%}",textposition="outside")
+    fig.update_xaxes(range=[0,1.1],tickformat=".0%")
+    fig.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(plot_style(fig,theme,410),use_container_width=True)
 
-    st.subheader("Accuracy Comparison")
-    accuracy_chart = comparison_df.set_index("Algorithm")[["Accuracy"]]
-    st.bar_chart(accuracy_chart)
-
-    st.subheader("F1 Score Comparison")
-    f1_chart = comparison_df.set_index("Algorithm")[["F1 Score"]]
-    st.bar_chart(f1_chart)
-
-    st.caption(
-        "Metrics are calculated from predictions on a held-out test set. "
-        "The original Logistic Regression model was loaded from the saved "
-        "model file; the other algorithms were trained when the app started."
-    )
-
+    a,b=st.columns(2,gap="large")
+    with a:
+        st.subheader("Accuracy Comparison")
+        accuracy_chart=comparison_df.set_index("Algorithm")[["Accuracy"]]
+        fig=px.bar(accuracy_chart.reset_index(),x="Algorithm",y="Accuracy",color_discrete_sequence=["#8b5cf6"])
+        fig.update_yaxes(range=[0,1],tickformat=".0%")
+        st.plotly_chart(plot_style(fig,theme,350),use_container_width=True)
+    with b:
+        st.subheader("F1 Score Comparison")
+        f1_chart=comparison_df.set_index("Algorithm")[["F1 Score"]]
+        fig=px.bar(f1_chart.reset_index(),x="Algorithm",y="F1 Score",color_discrete_sequence=["#38bdf8"])
+        fig.update_yaxes(range=[0,1],tickformat=".0%")
+        st.plotly_chart(plot_style(fig,theme,350),use_container_width=True)
+    st.caption("Metrics are calculated from predictions on a held-out test set. The original Logistic Regression model was loaded from the saved model file; the other algorithms were trained when the app started.")
     st.subheader("Feature Importance")
-
-    st.bar_chart(
-        feature_importance.set_index("Feature")["Importance"]
-    )
-
+    plot_feature_importance(theme)
 
 # ============================================================
 # PAGE 5 — STUDENT INSIGHTS
 # ============================================================
-
 elif page == "🔍 Student Insights":
-
-    st.title("🔍 Student Insights")
-
-    st.write(
-        "Analyze a student's academic profile and identify "
-        "areas that may require attention."
-    )
-
-    col1, col2 = st.columns(2)
-
+    page_heading("Student profile lab","🔍 Student Insights",
+                 "Adjust the original sliders and explore a live visualization of the entered profile.")
+    col1,col2=st.columns(2,gap="large")
     with col1:
-
-        attendance = st.slider(
-            "Attendance (%)",
-            0,
-            100,
-            75
-        )
-
-        internal_marks = st.slider(
-            "Internal Marks",
-            0,
-            100,
-            60
-        )
-
-        study_hours = st.slider(
-            "Study Hours per Day",
-            0.0,
-            12.0,
-            3.0
-        )
-
+        attendance=st.slider("Attendance (%)",0,100,75)
+        internal_marks=st.slider("Internal Marks",0,100,60)
+        study_hours=st.slider("Study Hours per Day",0.0,12.0,3.0)
     with col2:
-
-        previous_performance = st.slider(
-            "Previous Performance",
-            0,
-            100,
-            65
-        )
-
-        assignment_score = st.slider(
-            "Assignment Score",
-            0,
-            100,
-            70
-        )
-
+        previous_performance=st.slider("Previous Performance",0,100,65)
+        assignment_score=st.slider("Assignment Score",0,100,70)
     st.divider()
-
     st.subheader("Student Profile")
-
-    profile = pd.DataFrame({
-        "Factor": [
-            "Attendance",
-            "Internal Marks",
-            "Study Hours",
-            "Previous Performance",
-            "Assignment Score"
-        ],
-        "Value": [
-            attendance,
-            internal_marks,
-            study_hours,
-            previous_performance,
-            assignment_score
-        ]
+    profile=pd.DataFrame({
+        "Factor":["Attendance","Internal Marks","Study Hours","Previous Performance","Assignment Score"],
+        "Value":[attendance,internal_marks,study_hours,previous_performance,assignment_score]
     })
-
-    st.dataframe(
-        profile,
-        use_container_width=True
-    )
+    a,b=st.columns([.8,1.2],gap="large")
+    with a:
+        st.dataframe(profile,use_container_width=True,hide_index=True)
+        st.caption("Update the sliders to refresh the chart instantly.")
+    with b:
+        feature_radar(feature_values_from_inputs(attendance,internal_marks,study_hours,previous_performance,assignment_score),theme)
 
     st.subheader("Areas to Monitor")
-
-    if attendance < 75:
-
-        st.warning(
-            "Attendance may require improvement."
-        )
-
-    if internal_marks < 50:
-
-        st.warning(
-            "Internal marks may require additional attention."
-        )
-
-    if study_hours < 2:
-
-        st.info(
-            "Consider maintaining a more regular study schedule."
-        )
-
-    if previous_performance < 50:
-
-        st.warning(
-            "Previous performance indicates areas that may need review."
-        )
-
-    if assignment_score < 50:
-
-        st.warning(
-            "Assignment performance may require improvement."
-        )
-
-    if (
-        attendance >= 75
-        and internal_marks >= 50
-        and study_hours >= 2
-        and previous_performance >= 50
-        and assignment_score >= 50
-    ):
-
-        st.success(
-            "No major areas were flagged by the current rules."
-        )
-
-    st.caption(
-        "Student insights are general indicators and should not "
-        "be interpreted as guaranteed academic outcomes."
-    )
-
+    if attendance<75: st.warning("Attendance may require improvement.")
+    if internal_marks<50: st.warning("Internal marks may require additional attention.")
+    if study_hours<2: st.info("Consider maintaining a more regular study schedule.")
+    if previous_performance<50: st.warning("Previous performance indicates areas that may need review.")
+    if assignment_score<50: st.warning("Assignment performance may require improvement.")
+    if attendance>=75 and internal_marks>=50 and study_hours>=2 and previous_performance>=50 and assignment_score>=50:
+        st.success("No major areas were flagged by the current rules.")
+    st.caption("Student insights are general indicators and should not be interpreted as guaranteed academic outcomes.")
 
 # ============================================================
 # PAGE 6 — ABOUT PROJECT
 # ============================================================
-
 elif page == "ℹ️ About Project":
-
-    st.title("ℹ️ About the Project")
-
-    st.subheader("Student Performance Prediction System")
-
-    st.write(
-        """
-        This project uses machine learning to predict student
-        performance based on academic and study-related factors.
-        """
-    )
-
+    page_heading("Project guide","ℹ️ About the Project","The original Student Performance Prediction System—now with a richer interface.")
+    header_hero("ABOUT THE PROJECT","Built to make academic signals easier to understand.",
+                "Machine learning-based Pass/Fail prediction driven by attendance, marks, study hours, prior performance and assignments.",
+                ["Python","Streamlit","Scikit-learn"])
     st.subheader("Input Features")
-
-    st.write(
-        """
-        • Attendance
-
-        • Internal Marks
-
-        • Study Hours
-
-        • Previous Performance
-
-        • Assignment Score
-        """
-    )
-
+    cols=st.columns(5)
+    for col,txt in zip(cols,["📅 Attendance","📝 Internal Marks","⏳ Study Hours","📈 Previous Performance","📚 Assignment Score"]):
+        with col:
+            st.markdown(f'<div class="step"><div class="t">{txt}</div></div>',unsafe_allow_html=True)
     st.subheader("Machine Learning Workflow")
-
-    st.write(
-        """
-        1. Dataset Collection
-
-        2. Data Cleaning
-
-        3. Missing Value Handling
-
-        4. Exploratory Data Analysis
-
-        5. Feature Selection
-
-        6. Train-Test Split
-
-        7. Data Preprocessing
-
-        8. Model Training
-
-        9. Model Evaluation
-
-        10. Prediction
-
-        11. Feature Importance
-
-        12. Student Recommendations
-        """
-    )
-
+    steps=["Dataset Collection","Data Cleaning","Missing Value Handling","Exploratory Data Analysis",
+           "Feature Selection","Train-Test Split","Data Preprocessing","Model Training","Model Evaluation",
+           "Prediction","Feature Importance","Student Recommendations"]
+    for a,b in [(0,4),(4,8),(8,12)]:
+        cols=st.columns(4)
+        for col,i in zip(cols,range(a,b)):
+            with col:
+                st.markdown(f'<div class="step"><div class="n">{i+1:02d}</div><div class="t">{html.escape(steps[i])}</div></div>',unsafe_allow_html=True)
     st.subheader("Technologies Used")
-
-    st.write(
-        """
-        • Python
-
-        • Pandas
-
-        • NumPy
-
-        • Scikit-learn
-
-        • Matplotlib
-
-        • Jupyter Notebook
-
-        • Streamlit
-
-        • Joblib
-        """
-    )
-
+    st.write("Python · Pandas · NumPy · Scikit-learn · Matplotlib · Jupyter Notebook · Streamlit · Joblib")
     st.subheader("Important Note")
-
-    st.info(
-        "This application is intended for educational and "
-        "demonstration purposes. Predictions and recommendations "
-        "should not be treated as guaranteed academic outcomes."
-    )
+    st.info("This application is intended for educational and demonstration purposes. Predictions and recommendations should not be treated as guaranteed academic outcomes.")
